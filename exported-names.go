@@ -6,5 +6,9 @@ import (
 )
 
 func main() {
-	fmt.Println(math.pi)
+  // exported name from package should start with upper case
+  fmt.Println(math.Pi)
+
+  // This line shoud be compile error
+  // fmt.Println(math.pi)
 }
