@@ -16,6 +16,8 @@ package main
 //
 // complex64 complex128
 
+// For integer, use `int` unless there are special reasons
+
 import (
 	"fmt"
 	"math/cmplx"
