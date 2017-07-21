@@ -29,30 +29,41 @@ func (c *Cache) Contains(url string) bool {
   return b
 }
 
-func crawlWith(url string, depth int, fetcher Fetcher, cache *Cache) {
+func crawlWith(url string, depth int, fetcher Fetcher, cache *Cache, ch chan bool) {
   if depth <= 0 {
-		return
+		ch <- false
+    return
 	}
   if cache.Contains(url) {
+    ch <- false
     return
   }
 	body, urls, err := fetcher.Fetch(url)
   cache.Add(url)
 	if err != nil {
 		fmt.Println(err)
-		return
+		ch <- false
+    return
 	}
 	fmt.Printf("found: %s %q\n", url, body)
-	for _, u := range urls {
-		crawlWith(u, depth-1, fetcher, cache)
+  n := len(urls)
+  chs := make([]chan bool, n)
+	for i, u := range urls {
+    chs[i] = make(chan bool)
+		go crawlWith(u, depth-1, fetcher, cache, chs[i])
 	}
-	return
+  for _, c := range chs {
+    <- c
+  }
+	ch <- true
 }
 
 // Crawl uses fetcher to recursively crawl
 // pages starting with url, to a maximum of depth.
 func Crawl(url string, depth int, fetcher Fetcher) {
-	crawlWith(url, depth, fetcher, &Cache{urls: make(map[string]bool)})
+  ch := make(chan bool)
+	go crawlWith(url, depth, fetcher, &Cache{urls: make(map[string]bool)}, ch)
+  <- ch
 }
 
 func main() {
