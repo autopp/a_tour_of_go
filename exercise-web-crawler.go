@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-  "sync"
+	"sync"
 )
 
 type Fetcher interface {
@@ -12,58 +12,58 @@ type Fetcher interface {
 }
 
 type Cache struct {
-  urls map[string]bool
-  mutex sync.Mutex
+	urls  map[string]bool
+	mutex sync.Mutex
 }
 
 func (c *Cache) Add(url string) {
-  c.mutex.Lock()
-  c.urls[url] = true
-  c.mutex.Unlock()
+	c.mutex.Lock()
+	c.urls[url] = true
+	c.mutex.Unlock()
 }
 
 func (c *Cache) Contains(url string) bool {
-  c.mutex.Lock()
-  defer c.mutex.Unlock()
-  _, b := c.urls[url]
-  return b
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	_, b := c.urls[url]
+	return b
 }
 
 func crawlWith(url string, depth int, fetcher Fetcher, cache *Cache, ch chan bool) {
-  if depth <= 0 {
+	if depth <= 0 {
 		ch <- false
-    return
+		return
 	}
-  if cache.Contains(url) {
-    ch <- false
-    return
-  }
+	if cache.Contains(url) {
+		ch <- false
+		return
+	}
 	body, urls, err := fetcher.Fetch(url)
-  cache.Add(url)
+	cache.Add(url)
 	if err != nil {
 		fmt.Println(err)
 		ch <- false
-    return
+		return
 	}
 	fmt.Printf("found: %s %q\n", url, body)
-  n := len(urls)
-  chs := make([]chan bool, n)
+	n := len(urls)
+	chs := make([]chan bool, n)
 	for i, u := range urls {
-    chs[i] = make(chan bool)
+		chs[i] = make(chan bool)
 		go crawlWith(u, depth-1, fetcher, cache, chs[i])
 	}
-  for _, c := range chs {
-    <- c
-  }
+	for _, c := range chs {
+		<-c
+	}
 	ch <- true
 }
 
 // Crawl uses fetcher to recursively crawl
 // pages starting with url, to a maximum of depth.
 func Crawl(url string, depth int, fetcher Fetcher) {
-  ch := make(chan bool)
+	ch := make(chan bool)
 	go crawlWith(url, depth, fetcher, &Cache{urls: make(map[string]bool)}, ch)
-  <- ch
+	<-ch
 }
 
 func main() {
